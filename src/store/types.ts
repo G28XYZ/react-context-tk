@@ -1,38 +1,30 @@
 import { NestedKeys } from '../utils';
 
-// export type TStore = Parameters<typeof Store>[0];
-// export type TAllActions = Parameters<typeof Store>[1];
-
 export type TStore = object;
-export type TAllActions = any;
+export type TAllActions = Record<string, TSliceAction<TStore, undefined | Partial<TStore>>>;
 
 export type TDispatch = React.Dispatch<TCaseAction>;
 
-export type TCaseAction<A extends Record<string, any> = TAllActions, K extends keyof A = string> = {
+export type TCaseAction<A extends TAllActions = TAllActions, K extends keyof A = string> = {
 	type: K;
 	payload: Parameters<A[K]>[1];
-	// payload: any;
 };
 
-export type TSliceAction<State = undefined, Payload = undefined> = Payload extends object
-	? (state: State, payload: Payload) => void
-	: State extends object
-	? (state: State) => void
+export type TSliceAction<S extends TStore = undefined, P = undefined> = P extends object
+	? (state: S, payload: P) => void
+	: S extends object
+	? (state: S) => void
 	: () => void;
 
-export interface ISliceAction<State> {
-	[key: string]: TSliceAction<State, State>;
-}
-
-export interface ISliceProps<State, Reducers, Name> {
+export type TSliceProps<S extends TStore, R extends TAllActions, Name> = {
 	name: Name;
-	initialState: State;
-	reducers: Reducers;
-}
+	initialState: S;
+	reducers: R;
+};
 
 export type TStoreKey = NestedKeys<{ store: TStore }>;
 export type TActionPayload = TStore[TStoreKey];
 
-export type TAppActions<A extends Record<string, any>> = {
+export type TActions<A extends TAllActions> = {
 	[K in keyof A]: Parameters<A[K]>[1] extends undefined ? () => TCaseAction : (payload: Parameters<A[K]>[1]) => TCaseAction;
 };

@@ -1,14 +1,14 @@
 import _ from 'lodash';
-import { ISliceAction, ISliceProps, TActionPayload, TAppActions } from '../store/types';
+import { TSliceProps, TActionPayload, TActions } from '../store/types';
 
-export function createSlice<State extends object, Reducers extends ISliceAction<State>, Name extends string = string>(
-	props: ISliceProps<State, Reducers, Name>
+export function createSlice<State extends object, Reducers extends Record<string, any>, Name extends string>(
+	props: TSliceProps<State, Reducers, Name>
 ) {
 	return {
 		initialState: props.initialState,
 		name: props.name,
 		reducers: props.reducers,
-		actions: {} as TAppActions<Reducers>,
+		actions: { ...props.reducers } as TActions<Reducers>,
 		get reducer(): State {
 			const sliceName = this.name;
 			const reducers = this.reducers;
@@ -30,7 +30,6 @@ export function createSlice<State extends object, Reducers extends ISliceAction<
 					});
 					_.assign(this.actions, {
 						[originalFuncName]: (payload: Partial<TActionPayload>) => {
-							console.log(sliceFuncName, payload);
 							return { type: sliceFuncName, payload };
 						},
 					});

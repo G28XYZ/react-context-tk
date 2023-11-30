@@ -1,8 +1,8 @@
-import { ISliceAction, ISliceProps, TAppActions } from '../store/types';
-export declare function createSlice<State extends object, Reducers extends ISliceAction<State>, Name extends string = string>(props: ISliceProps<State, Reducers, Name>): {
+import { TSliceProps, TActions } from '../store/types';
+export declare function createSlice<State extends object, Reducers extends Record<string, any>, Name extends string>(props: TSliceProps<State, Reducers, Name>): {
     initialState: State;
     name: Name;
     reducers: Reducers;
-    actions: TAppActions<Reducers>;
+    actions: TActions<Reducers>;
     readonly reducer: State;
 };

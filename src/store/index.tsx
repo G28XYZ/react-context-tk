@@ -1,13 +1,13 @@
 import React from 'react';
 export * from './types';
-import { TCaseAction, TDispatch } from './types';
+import { TCaseAction, TDispatch, TSliceAction } from './types';
 import _ from 'lodash';
 
 // const logger = (action: IAction) => {
 // 	console.log("logger:", action);
 // };
 
-export const Store = <S extends Record<string, any>, A extends Record<string, Function>>(store: S, actions: A) => {
+export const Store = <S extends object, A extends Record<string, Function>>(store: S, actions: A) => {
 	const Context = React.createContext<{
 		state: typeof store;
 		dispatch: TDispatch;
@@ -17,7 +17,7 @@ export const Store = <S extends Record<string, any>, A extends Record<string, Fu
 		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 		console.log(action);
 		const fn = actions[action.type];
-		const newState = _.assign(state, fn(action.payload!));
+		const newState = _.assign(state, fn(action.payload));
 		return _.cloneDeep(newState);
 	};
 
