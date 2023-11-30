@@ -3,9 +3,9 @@ import { NestedKeys } from '../utils';
 export type TStore = object;
 export type TAllActions = any;
 export type TDispatch = React.Dispatch<TCaseAction>;
-export type TCaseAction<A extends object = TAllActions, K extends keyof A = keyof A> = {
+export type TCaseAction<A extends Record<string, any> = TAllActions, K extends keyof A = string> = {
     type: K;
-    payload: any;
+    payload: Parameters<A[K]>[1];
 };
 export type TSliceAction<State = undefined, Payload = undefined> = Payload extends object ? (state: State, payload: Payload) => void : State extends object ? (state: State) => void : () => void;
 export interface ISliceAction<State> {
@@ -20,6 +20,6 @@ export type TStoreKey = NestedKeys<{
     store: TStore;
 }>;
 export type TActionPayload = TStore[TStoreKey];
-export type TAppActions<A extends object> = {
-    [K in keyof A]: any;
+export type TAppActions<A extends Record<string, any>> = {
+    [K in keyof A]: Parameters<A[K]>[1] extends undefined ? () => TCaseAction : (payload: Parameters<A[K]>[1]) => TCaseAction;
 };

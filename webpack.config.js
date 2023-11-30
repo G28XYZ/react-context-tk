@@ -20,6 +20,10 @@ module.exports = (env) => {
 		entry: './src/index.ts',
 		resolve: {
 			extensions: ['.tsx', '.ts', '.js', '.jsx'],
+			// alias: {
+			// 	react: path.resolve(__dirname, './node_modules/react'),
+			// 	'react-dom': path.resolve(__dirname, './node_modules/react-dom'),
+			// },
 		},
 		output: {
 			path: path.resolve('lib'),

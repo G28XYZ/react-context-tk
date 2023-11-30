@@ -1,6 +1,6 @@
 {
 	"compilerOptions": {
-		"module": "ESNext",
+		"module": "esnext",
 		"target": "es5", // Тип кода создаваемого итогового файла.
 		"lib": ["dom", "dom.iterable", "esnext"],
 		"sourceMap": true,
@@ -22,9 +22,8 @@
 		"noUnusedParameters": false, // Показывать ошибку, если где-то найдены неиспользуемые параметры.
 		"noUnusedLocals": false, // Показывать ошибку, если где-то найдены неиспользуемые локальные значения.
 		"emitDecoratorMetadata": true,
-		"experimentalDecorators": true,
-		"paths": { "react": ["./node_modules/@types/react"] }
+		"experimentalDecorators": true
 	},
-	"include": ["src", "globals.d.ts"],
+	"include": ["src", "globals.d.ts", "sass"],
 	"exclude": ["node_modules", "lib", "webpack.config.js"]
 }
