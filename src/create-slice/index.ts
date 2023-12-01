@@ -1,14 +1,16 @@
 import _ from 'lodash';
-import { TSliceProps, TActionPayload, TActions } from '../store/types';
+import { TSliceProps, TActionPayload, TActions, TAllActions, TStore } from '../store/types';
 
-export function createSlice<State extends object, Reducers extends Record<string, any>, Name extends string>(
+type TReducer<S extends TStore> = TAllActions<S>;
+
+export function createSlice<State extends TStore, Reducers extends TReducer<State>, Name extends string>(
 	props: TSliceProps<State, Reducers, Name>
 ) {
 	return {
 		initialState: props.initialState,
 		name: props.name,
 		reducers: props.reducers,
-		actions: { ...props.reducers } as TActions<Reducers>,
+		actions: {} as TActions<State, Reducers>,
 		get reducer(): State {
 			const sliceName = this.name;
 			const reducers = this.reducers;
