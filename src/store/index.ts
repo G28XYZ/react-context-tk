@@ -1,64 +1,79 @@
 import React from 'react';
-export * from './types';
-import { TCaseAction, TDispatch, TSliceAction } from './types';
+import { TActions, TAllActions, TCaseAction, TDispatch, TStore } from './types';
 import _ from 'lodash';
 
 // const logger = (action: IAction) => {
 // 	console.log("logger:", action);
 // };
 
-class StoreClass<S extends object, A extends Record<string, Function>> {
-	actions: A = undefined;
+export class StoreClass<S extends object, A extends Record<string, Function>> {
+	private actions: A = undefined;
 
-	store: S = undefined;
+	private state: S = undefined;
 
-	defaultContext = { state: this.store, dispatch: () => ({}) };
+	private defaultContext = { state: this.state, dispatch: () => ({}) };
 
-	context = React.createContext<{
+	private isInit = false;
+
+	private middlewares: { action: (props: { action: any; actions: A; state: S; dispatch: TDispatch }) => any }[] = [];
+
+	private context: React.Context<{
+		state: S;
+		dispatch: TDispatch;
+	}> = React.createContext<{
 		state: S;
 		dispatch: TDispatch;
 	}>(this.defaultContext);
 
-	constructor(store: S, actions: A) {
+	constructor(state: S, actions: A) {
 		this.actions = actions;
-		this.store = store;
-		this.context = React.createContext<{
-			state: S;
-			dispatch: TDispatch;
-		}>({ state: this.store, dispatch: () => ({}) });
+		this.state = state;
 	}
 
-	storeReducer: React.Reducer<S, TCaseAction> = (state, action) => {
+	private storeReducer: React.Reducer<S, TCaseAction> = (state, action) => {
 		const fn = this.actions[action.type];
 		const newState = _.assign(state, fn(action.payload));
 		return _.cloneDeep(newState);
 	};
 
-	storeProvider: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
-		const [state, dispatch] = React.useReducer(this.storeReducer, this.store);
+	private useReducerWithMiddleware(): [S, React.Dispatch<TCaseAction>] {
+		const [state, dispatch] = React.useReducer(this.storeReducer, this.state);
+		const dispatchWithMiddleware: React.Dispatch<TCaseAction> = async (action) => {
+			this.middlewares.forEach((middlewareModel) => middlewareModel.action({ action, state, actions: this.actions, dispatch }));
+			dispatch(action);
+		};
+		return [state, dispatchWithMiddleware];
+	}
+
+	private storeProvider: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
+		const [state, dispatch] = this.useReducerWithMiddleware();
 		const value = React.useMemo(() => ({ state, dispatch }), [state, dispatch]);
 		return React.createElement(this.context.Provider, { value, children });
 	};
 
-	// useStore<T>(fn: (state: S) => T): [state: T, { actions: A; dispatch: TDispatch }];
-	// useStore(): [state: S, { actions: A; dispatch: TDispatch }];
-	useStore = <T>(fn?: (state: S) => T) => {
-		let { state, dispatch } = React.useContext(this.context);
+	private useStore<T>(fn: (state: S) => T): [state: T, { actions: A; dispatch: TDispatch }];
+	private useStore(): [state: S, { actions: A; dispatch: TDispatch }];
+	private useStore<T>(fn?: (state: S) => T) {
+		const { state, dispatch } = React.useContext(this.context);
 		if (fn) {
 			return [fn(state), { dispatch, actions: this.actions }];
 		}
 		return [state, { dispatch, actions: this.actions }];
-	};
+	}
 
-	get init() {
-		return { useStore: this.useStore, StoreProvider: this.storeProvider };
+	get store() {
+		return { useStore: this.useStore.bind(this), StoreProvider: this.storeProvider };
+	}
+
+	setMiddlware(...middleware: { action: (props: { action: any; actions: A; state: S; dispatch: TDispatch }) => any }[]) {
+		this.middlewares.push(...middleware);
 	}
 }
 
-export const StoreInstance = <S extends object, A extends Record<string, Function>>(store: S, actions: A) => {
-	const instance = new StoreClass(store, actions);
-	console.log(instance);
-	return _.assign({}, instance.init, { storeInstance: instance });
+export const Store = <S extends TStore, A extends Record<string, Function>>(state: S, actions: A) => {
+	const instance = new StoreClass<S, A>(state, actions);
+	// console.log(instance);
+	return _.assign({}, instance.store, { storeInstance: instance });
 };
 
 // export const Store = <S extends object, A extends Record<string, Function>>(store: S, actions: A) => {

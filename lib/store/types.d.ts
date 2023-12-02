@@ -3,7 +3,7 @@ import { NestedKeys } from '../utils';
 export type TStore = object;
 export type TAllActions<S extends TStore = undefined, P = undefined> = Record<string, TSliceAction<S, P>>;
 export type TDispatch = React.Dispatch<TCaseAction>;
-export type TCaseAction<A extends TAllActions = TAllActions, K extends keyof A = string> = {
+export type TCaseAction<A extends TAllActions = TAllActions, K extends keyof A = keyof A> = {
     type: K;
     payload: Parameters<A[K]>[1];
 };
@@ -11,7 +11,7 @@ export type TPayload<S, P = never> = P;
 export type TSliceAction<S extends TStore = undefined, P = undefined> = (state?: S, payload?: P) => void;
 export type TSliceProps<S extends TStore, R extends TAllActions<S>, Name> = {
     name: Name;
-    initialState: S;
+    initState: S;
     reducers: R;
 };
 export type TStoreKey = NestedKeys<{
