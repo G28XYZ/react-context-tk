@@ -1,7 +1,8 @@
-import { TSliceProps, TActions, TAllActions, TStore } from '../store/types';
+import { TSliceProps, TActions, TAllActions, TStore } from '../types';
 type TReducer<S extends TStore> = TAllActions<S>;
 export declare class Slice<State extends TStore, Reducers extends TReducer<State>, Name extends string> {
-    private _initState;
+    private storeInstance;
+    private _state;
     private _name;
     private _reducers;
     private _actions;
@@ -10,6 +11,7 @@ export declare class Slice<State extends TStore, Reducers extends TReducer<State
     get name(): Name;
     get reducers(): Reducers;
     get state(): State;
+    private set state(value);
     private get reducer();
     get store(): { [K in Name]: State; };
 }

@@ -12,16 +12,10 @@ export type TCaseAction<A extends TAllActions = TAllActions, K extends keyof A =
 
 export type TPayload<S, P = never> = P;
 
-// export type TSliceAction<S extends TStore = undefined, P = undefined> = P extends object
-// 	? (state: S, payload: TPayload<S, P>) => void
-// 	: S extends object
-// 	? (state: S) => void
-// 	: () => void;
-
-export type TSliceAction<S extends TStore = undefined, P = undefined> = (state?: S, payload?: P) => void;
+export type TSliceAction<S extends TStore = undefined, P = undefined> = (state?: S, payload?: P) => any;
 
 export type TSliceProps<S extends TStore, R extends TAllActions<S>, Name> = {
-	name: Name;
+	name: Name extends '' | null | undefined | number | object ? never : Name;
 	initState: S;
 	reducers: R;
 };

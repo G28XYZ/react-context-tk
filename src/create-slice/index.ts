@@ -1,18 +1,24 @@
-import _ from 'lodash';
-import { TSliceProps, TActionPayload, TActions, TAllActions, TStore } from '../store/types';
+import { assign, bind, cloneDeep, isEqual } from 'lodash';
+import { TSliceProps, TActionPayload, TActions, TAllActions, TStore } from '../types';
+import { Inject } from 'typedi';
+import { StoreClass } from '../store';
 
 type TReducer<S extends TStore> = TAllActions<S>;
 
 export class Slice<State extends TStore, Reducers extends TReducer<State>, Name extends string> {
-	private _initState: State = undefined;
+	@Inject('StoreClass') private storeInstance: StoreClass<any, any>;
+	private _state: State = undefined;
 	private _name: Name = undefined;
 	private _reducers: Reducers = undefined;
 	private _actions = {} as TActions<State, Reducers>;
 
 	constructor(props: TSliceProps<State, Reducers, Name>) {
+		if (!props.name) {
+			throw Error('The name for the slice must be set');
+		}
 		this._name = props.name;
 		this._reducers = props.reducers;
-		this._initState = props.initState;
+		this._state = cloneDeep(props.initState);
 	}
 	get actions() {
 		return this._actions;
@@ -24,28 +30,32 @@ export class Slice<State extends TStore, Reducers extends TReducer<State>, Name 
 		return this._reducers;
 	}
 	get state(): State {
-		return this._initState;
+		return this._state;
+	}
+	private set state(s: State) {
+		this._state = s;
 	}
 	private get reducer(): State {
 		const sliceName = this.name;
 		const reducers = this.reducers;
 		for (const f in reducers) {
-			const fn = reducers[f];
-			const originalFuncName = fn.name;
+			const originalFuncName = reducers[f].name;
 			if (!originalFuncName.includes(`${sliceName}/${originalFuncName}`)) {
 				const sliceFuncName = `${sliceName}/${originalFuncName}`;
-				Object.defineProperty(fn, 'name', {
-					value: sliceFuncName,
-					writable: false,
-					enumerable: false,
-				});
-				_.assign(this._actions, {
-					[sliceFuncName]: (payload: never) => {
-						fn(this.state, payload);
-						return { [sliceName]: this.state };
+				// Object.defineProperty(reducers[f], 'name', {
+				// 	value: sliceFuncName,
+				// 	writable: false,
+				// 	enumerable: false,
+				// });
+				const fn = reducers[f].bind(this) as any;
+				assign(this._actions, {
+					[sliceFuncName]: (payload: never, store: Record<Name, State>) => {
+						fn(store[this.name], payload);
+						this.state = store[this.name];
+						return store;
 					},
 				});
-				_.assign(this._actions, {
+				assign(this._actions, {
 					[originalFuncName]: (payload: Partial<TActionPayload>) => {
 						return { type: sliceFuncName, payload };
 					},
@@ -61,5 +71,5 @@ export class Slice<State extends TStore, Reducers extends TReducer<State>, Name 
 }
 
 export function createSlice<S extends TStore, R extends TReducer<S>, N extends string>(props: TSliceProps<S, R, N>) {
-	return new Slice<S, R, N>(props);
+	return new Slice<S, R, N>({ ...props, initState: cloneDeep(props.initState) });
 }

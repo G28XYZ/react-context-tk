@@ -1,12 +1,21 @@
 import React from 'react';
-import { TActions, TAllActions, TCaseAction, TDispatch, TStore } from './types';
-import _ from 'lodash';
+import { TAllActions, TCaseAction, TDispatch, TStore } from '../types';
+import { assign, bind, cloneDeep } from 'lodash';
+import Container, { Service } from 'typedi';
 
 // const logger = (action: IAction) => {
 // 	console.log("logger:", action);
 // };
+export type TMiddleware<S extends StoreClass<any, any>> = Parameters<S['createMiddleware']>[0];
+type TMiddlewareProps<S extends object = undefined, A extends TAllActions = TAllActions, K extends string = undefined> = {
+	readonly action: Readonly<TCaseAction<A, K extends undefined ? keyof A : K>>;
+	readonly actions: Readonly<A>;
+	readonly state: Readonly<S>;
+	readonly dispatch: TDispatch;
+};
 
-export class StoreClass<S extends object, A extends Record<string, Function>> {
+@Service('StoreClass')
+export class StoreClass<S extends object, A extends TAllActions> {
 	private actions: A = undefined;
 
 	private state: S = undefined;
@@ -15,7 +24,9 @@ export class StoreClass<S extends object, A extends Record<string, Function>> {
 
 	private isInit = false;
 
-	private middlewares: { action: (props: { action: any; actions: A; state: S; dispatch: TDispatch }) => any }[] = [];
+	private middlewares: { action: (props: TMiddlewareProps<S, A>) => any }[] = [];
+
+	private _removedKeys = ['init', 'isInit', '_removedKeys'] as (keyof this)[];
 
 	private context: React.Context<{
 		state: S;
@@ -30,16 +41,32 @@ export class StoreClass<S extends object, A extends Record<string, Function>> {
 		this.state = state;
 	}
 
+	init(state: S, actions: A) {
+		if (this.isInit === false) {
+			this.isInit = true;
+			this.actions = actions;
+			this.state = cloneDeep(state);
+			this._removedKeys.forEach((item) => {
+				delete (StoreClass.prototype as any)[item];
+				delete this[item];
+			});
+			return { ...this.store, storeInstance: Container.get<StoreClass<S, A>>('StoreClass') };
+		}
+	}
+
 	private storeReducer: React.Reducer<S, TCaseAction> = (state, action) => {
-		const fn = this.actions[action.type];
-		const newState = _.assign(state, fn(action.payload));
-		return _.cloneDeep(newState);
+		const clone = cloneDeep(state);
+		this.actions[action.type](action.payload, clone as any);
+		console.log('clone', clone);
+		return clone;
 	};
 
-	private useReducerWithMiddleware(): [S, React.Dispatch<TCaseAction>] {
+	private useReducerWithMiddleware(): [S, TDispatch] {
 		const [state, dispatch] = React.useReducer(this.storeReducer, this.state);
-		const dispatchWithMiddleware: React.Dispatch<TCaseAction> = async (action) => {
-			this.middlewares.forEach((middlewareModel) => middlewareModel.action({ action, state, actions: this.actions, dispatch }));
+		const dispatchWithMiddleware: TDispatch = async (action) => {
+			await Promise.allSettled(
+				this.middlewares.map((item) => item.action.call(this, { action, state, actions: this.actions, dispatch }))
+			);
 			dispatch(action);
 		};
 		return [state, dispatchWithMiddleware];
@@ -62,66 +89,21 @@ export class StoreClass<S extends object, A extends Record<string, Function>> {
 	}
 
 	get store() {
-		return { useStore: this.useStore.bind(this), StoreProvider: this.storeProvider };
+		return {
+			useStore: this.useStore.bind(this),
+			StoreProvider: Object.defineProperty(this.storeProvider, 'name', { value: 'StoreProvider' }),
+		};
 	}
 
-	setMiddlware(...middleware: { action: (props: { action: any; actions: A; state: S; dispatch: TDispatch }) => any }[]) {
-		this.middlewares.push(...middleware);
+	private setMiddlware(...middleware: { action: (props: TMiddlewareProps<S, A, `${keyof S & string}/${keyof A & string}`>) => any }[]) {
+		return (this.middlewares = this.middlewares.concat(middleware));
+	}
+
+	createMiddleware(...fnArr: ((props: TMiddlewareProps<S, A, `${keyof S & string}/${keyof A & string}`>) => any)[]) {
+		return this.setMiddlware(...fnArr.map((fn) => ({ action: fn })));
 	}
 }
 
-export const Store = <S extends TStore, A extends Record<string, Function>>(state: S, actions: A) => {
-	const instance = new StoreClass<S, A>(state, actions);
-	// console.log(instance);
-	return _.assign({}, instance.store, { storeInstance: instance });
+export const Store = <S extends TStore, A extends TAllActions>(state: S, actions: A) => {
+	return Container.get<StoreClass<S, A>>('StoreClass').init(cloneDeep(state), actions);
 };
-
-// export const Store = <S extends object, A extends Record<string, Function>>(store: S, actions: A) => {
-// 	const Context = React.createContext<{
-// 		state: typeof store;
-// 		dispatch: TDispatch;
-// 	}>({ state: store, dispatch: () => ({}) });
-
-// 	const storeReducer: React.Reducer<typeof store, TCaseAction> = (state, action) => {
-// 		const fn = actions[action.type];
-// 		const newState = _.assign(state, fn(action.payload));
-// 		return _.cloneDeep(newState);
-// 	};
-
-// 	// const MiddlewareModelInstance = Container.get<TMiddleware>("MiddlewareModel");
-// 	// MiddlewareModelInstance.actions = actions;
-
-// 	// const useReducerWithMiddleware = (
-// 	// 	reducer: typeof storeReducer,
-// 	// 	initialState: typeof store
-// 	// 	// middlewares: TMiddleware[] = []
-// 	// ): [typeof store, TDispatch] => {
-// 	// 	const [state, dispatch] = useReducer(reducer, initialState);
-// 	// 	// const dispatchWithMiddleware = (action: TCaseAction<A>) => {
-// 	// 	// 	middlewares.forEach((middlewareModel) => middlewareModel.middleware(action));
-// 	// 	// 	dispatch(action);
-// 	// 	// };
-// 	// 	return [state, dispatch];
-// 	// };
-
-// 	const StoreProvider: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
-// 		// const [state, dispatch] = useReducerWithMiddleware(storeReducer, store);
-// 		const [state, dispatch] = React.useReducer(storeReducer, store);
-// 		const value = React.useMemo(() => ({ state, dispatch }), [state, dispatch]);
-// 		// MiddlewareModelInstance.dispatch === undefined && (MiddlewareModelInstance.dispatch = dispatch);
-// 		// return <Context.Provider value={value}>{children}</Context.Provider>;
-// 		return React.createElement(Context.Provider, { value, children });
-// 	};
-
-// 	function useStore<T>(fn: (state: S) => T): [state: T, { actions: A; dispatch: TDispatch }];
-// 	function useStore(): [state: S, { actions: A; dispatch: TDispatch }];
-// 	function useStore<T>(fn?: (state: S) => T) {
-// 		let { state, dispatch } = React.useContext(Context);
-// 		if (fn) {
-// 			return [fn(state), { dispatch, actions }];
-// 		}
-// 		return [state, { dispatch, actions }];
-// 	}
-
-// 	return { useStore, StoreProvider };
-// };

@@ -1,13 +1,37 @@
 import React from 'react';
-import { TDispatch } from './types';
-export declare class StoreClass<S extends object, A extends Record<string, Function>> {
+import { TAllActions, TCaseAction, TDispatch } from '../types';
+export type TMiddleware<S extends StoreClass<any, any>> = Parameters<S['createMiddleware']>[0];
+type TMiddlewareProps<S extends object = undefined, A extends TAllActions = TAllActions, K extends string = undefined> = {
+    readonly action: Readonly<TCaseAction<A, K extends undefined ? keyof A : K>>;
+    readonly actions: Readonly<A>;
+    readonly state: Readonly<S>;
+    readonly dispatch: TDispatch;
+};
+export declare class StoreClass<S extends object, A extends TAllActions> {
     private actions;
     private state;
     private defaultContext;
     private isInit;
     private middlewares;
+    private _removedKeys;
     private context;
     constructor(state: S, actions: A);
+    init(state: S, actions: A): {
+        storeInstance: StoreClass<S, A>;
+        useStore: {
+            <T>(fn: (state: S) => T): [state: T, {
+                actions: A;
+                dispatch: TDispatch;
+            }];
+            (): [state: S, {
+                actions: A;
+                dispatch: TDispatch;
+            }];
+        };
+        StoreProvider: React.FC<{
+            children?: React.ReactNode;
+        }>;
+    };
     private storeReducer;
     private useReducerWithMiddleware;
     private storeProvider;
@@ -27,16 +51,13 @@ export declare class StoreClass<S extends object, A extends Record<string, Funct
             children?: React.ReactNode;
         }>;
     };
-    setMiddlware(...middleware: {
-        action: (props: {
-            action: any;
-            actions: A;
-            state: S;
-            dispatch: TDispatch;
-        }) => any;
-    }[]): void;
+    private setMiddlware;
+    createMiddleware(...fnArr: ((props: TMiddlewareProps<S, A, `${keyof S & string}/${keyof A & string}`>) => any)[]): {
+        action: (props: TMiddlewareProps<S, A, undefined>) => any;
+    }[];
 }
-export declare const Store: <S extends object, A extends Record<string, Function>>(state: S, actions: A) => {
+export declare const Store: <S extends object, A extends TAllActions>(state: S, actions: A) => {
+    storeInstance: StoreClass<S, A>;
     useStore: {
         <T>(fn: (state: S) => T): [state: T, {
             actions: A;
@@ -50,6 +71,5 @@ export declare const Store: <S extends object, A extends Record<string, Function
     StoreProvider: React.FC<{
         children?: React.ReactNode;
     }>;
-} & {
-    storeInstance: StoreClass<S, A>;
 };
+export {};
