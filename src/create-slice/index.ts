@@ -9,14 +9,13 @@ type TReducer<S extends TStore> = TAllActions<S>;
 export class Slice<State extends TStore, Reducers extends TReducer<State>, Name extends string> {
 	@Inject('StoreClass') private storeInstance: StoreClass<any, any> = undefined;
 	private _name: Name = undefined;
-	private _sliceReducers: Reducers = undefined;
+	private _reducers: Reducers = undefined;
 	private _sliceActions = {} as TActions<State, Reducers>;
 
 	protected init(props: TSliceProps<State, Reducers, Name>) {
 		if (!props.name) {
 			throw Error('The name for the slice must be set');
 		}
-		this.storeInstance = Container.get<StoreClass<State, any>>('StoreClass');
 		this._name = props.name;
 		this._reducers = props.reducers;
 		this.storeInstance['setState']({ [this._name]: cloneDeep(props.initState) });
@@ -38,7 +37,7 @@ export class Slice<State extends TStore, Reducers extends TReducer<State>, Name 
 			if (!originalFuncName.includes(`${this.name}/${originalFuncName}`)) {
 				const sliceFuncName = `${this.name}/${originalFuncName}`;
 				const fn = this._reducers[f].bind(this) as any;
-				assign(this._actions, {
+				assign(this._sliceActions, {
 					[sliceFuncName]: (payload: never) => {
 						fn(this.state, payload);
 						return { [this.name]: this.state };

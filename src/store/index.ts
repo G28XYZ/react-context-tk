@@ -34,28 +34,28 @@ export class StoreClass<S extends object, A extends TAllActions> {
 	}> = React.createContext<{
 		state: S;
 		dispatch: TDispatch;
-	}>(this.defaultContext);
+	}>(this._defaultContext);
 
 	protected init(state: S, actions: A) {
-		if (this.isInit === false) {
-			this.isInit = true;
-			this.actions = actions;
-			this.state = cloneDeep(state);
+		if (this._isInit === false) {
+			this._isInit = true;
+			this._actions = actions;
+			this._state = cloneDeep(state);
 			return { ...this.store, storeInstance: this as StoreClass<S, A> };
 		}
 	}
 
 	private storeReducer: React.Reducer<S, TCaseAction> = (state, action) => {
-		this.state = cloneDeep(state);
-		this.actions[action.type](action.payload);
-		return this.state;
+		this._state = cloneDeep(state);
+		this._actions[action.type](action.payload);
+		return this._state;
 	};
 
 	private useReducerWithMiddleware(): [S, TDispatch] {
 		const [state, dispatch] = React.useReducer(this.storeReducer, this._state);
 		const dispatchWithMiddleware: TDispatch = async (action) => {
 			await Promise.allSettled(
-				this._middlewares.map((item) => item.action.call(this, { action, state, actions: this._actions, dispatch }))
+				this.middlewares.map((item) => item.action.call(this, { action, state, actions: this._actions, dispatch }))
 			);
 			dispatch(action);
 		};
@@ -85,24 +85,16 @@ export class StoreClass<S extends object, A extends TAllActions> {
 		};
 	}
 
-	private setMiddlware(...middleware: { action: (props: TMiddlewareProps<S, A, `${keyof S & string}/${keyof A & string}`>) => any }[]) {
+	private setMiddleware(...middleware: { action: (props: TMiddlewareProps<S, A, `${keyof S & string}/${keyof A & string}`>) => any }[]) {
 		return (this.middlewares = this.middlewares.concat(middleware));
 	}
 
 	protected getState() {
-		return this.state;
+		return this._state;
 	}
 
 	protected setState(state: S) {
-		this.state = cloneDeep({ ...this.state, ...state });
-	}
-
-	protected getState() {
-		return this.state;
-	}
-
-	protected setState(state: S) {
-		this.state = cloneDeep({ ...this.state, ...state });
+		this._state = cloneDeep({ ...this._state, ...state });
 	}
 
 	createMiddleware(...fnArr: ((props: TMiddlewareProps<S, A, `${keyof S & string}/${keyof A & string}`>) => any)[]) {

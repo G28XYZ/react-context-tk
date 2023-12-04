@@ -1,6 +1,6 @@
 {
 	"name": "react-context-tk",
-	"version": "1.0.3",
+	"version": "1.0.4",
 	"description": "React Context API as @reduxjs/toolkit, use only react ap",
 	"main": "lib/index.js",
 	"module": "lib/index.js",
