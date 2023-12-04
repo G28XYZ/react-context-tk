@@ -1,6 +1,6 @@
 import React from 'react';
-import { TAllActions, TCaseAction, TDispatch, TStore } from '../types';
-import { cloneDeep } from 'lodash';
+import { TAllActions, type TCaseAction, TDispatch, TStore } from '../types';
+import { assign, bind, cloneDeep } from 'lodash';
 import Container, { Service } from 'typedi';
 
 // const logger = (action: IAction) => {
@@ -26,7 +26,9 @@ export class StoreClass<S extends object, A extends TAllActions> {
 
 	private _isInit = false;
 
-	private middlewares: { action: (props: TMiddlewareProps<S, A>) => any }[] = [];
+	private _middlewares: { action: (props: TMiddlewareProps<S, A>) => any }[] = [];
+
+	private _removedKeys = ['init', 'isInit', '_removedKeys'] as (keyof this)[];
 
 	private context: React.Context<{
 		state: S;
@@ -34,21 +36,25 @@ export class StoreClass<S extends object, A extends TAllActions> {
 	}> = React.createContext<{
 		state: S;
 		dispatch: TDispatch;
-	}>(this.defaultContext);
+	}>(this._defaultContext);
 
-	protected init(state: S, actions: A) {
-		if (this.isInit === false) {
-			this.isInit = true;
-			this.actions = actions;
-			this.state = cloneDeep(state);
-			return { ...this.store, storeInstance: this as StoreClass<S, A> };
+	init(state: S, actions: A) {
+		if (this._isInit === false) {
+			this._isInit = true;
+			this._actions = actions;
+			this._state = cloneDeep(state);
+			// this._removedKeys.forEach((item) => {
+			// 	delete (StoreClass.prototype as any)[item];
+			// 	delete this[item];
+			// });
+			return { ...this.store, storeInstance: this.parent };
 		}
 	}
 
-	private storeReducer: React.Reducer<S, TCaseAction> = (state, action) => {
-		this.state = cloneDeep(state);
-		this.actions[action.type](action.payload);
-		return this.state;
+	private storeReducer = (state: S, action: TCaseAction) => {
+		this._state = cloneDeep(state);
+		this._actions[action.type](action.payload, this._state as any);
+		return this._state;
 	};
 
 	private useReducerWithMiddleware(): [S, TDispatch] {
@@ -85,24 +91,8 @@ export class StoreClass<S extends object, A extends TAllActions> {
 		};
 	}
 
-	private setMiddlware(...middleware: { action: (props: TMiddlewareProps<S, A, `${keyof S & string}/${keyof A & string}`>) => any }[]) {
-		return (this.middlewares = this.middlewares.concat(middleware));
-	}
-
-	protected getState() {
-		return this.state;
-	}
-
-	protected setState(state: S) {
-		this.state = cloneDeep({ ...this.state, ...state });
-	}
-
-	protected getState() {
-		return this.state;
-	}
-
-	protected setState(state: S) {
-		this.state = cloneDeep({ ...this.state, ...state });
+	private setMiddleware(...middleware: { action: (props: TMiddlewareProps<S, A, `${keyof S & string}/${keyof A & string}`>) => any }[]) {
+		return (this._middlewares = this._middlewares.concat(middleware));
 	}
 
 	createMiddleware(...fnArr: ((props: TMiddlewareProps<S, A, `${keyof S & string}/${keyof A & string}`>) => any)[]) {
@@ -111,5 +101,7 @@ export class StoreClass<S extends object, A extends TAllActions> {
 }
 
 export const Store = <S extends TStore, A extends TAllActions>(state: S, actions: A) => {
-	return Container.get<StoreClass<S, A>>('StoreClass')['init'](state, actions);
+	const instance = Container.get<StoreClass<S, A>>('StoreClass');
+	instance.parent = instance;
+	return instance.init(state, actions);
 };
