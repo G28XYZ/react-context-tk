@@ -13,10 +13,8 @@ export declare class StoreClass<S extends object, A extends TAllActions> {
     private defaultContext;
     private isInit;
     private middlewares;
-    private _removedKeys;
     private context;
-    constructor(state: S, actions: A);
-    init(state: S, actions: A): {
+    protected init(state: S, actions: A): {
         storeInstance: StoreClass<S, A>;
         useStore: {
             <T>(fn: (state: S) => T): [state: T, {
@@ -52,6 +50,8 @@ export declare class StoreClass<S extends object, A extends TAllActions> {
         }>;
     };
     private setMiddlware;
+    protected getState(): S;
+    protected setState(state: S): void;
     createMiddleware(...fnArr: ((props: TMiddlewareProps<S, A, `${keyof S & string}/${keyof A & string}`>) => any)[]): {
         action: (props: TMiddlewareProps<S, A, undefined>) => any;
     }[];

@@ -1,6 +1,6 @@
 import React from 'react';
 import { TAllActions, TCaseAction, TDispatch, TStore } from '../types';
-import { assign, bind, cloneDeep } from 'lodash';
+import { cloneDeep } from 'lodash';
 import Container, { Service } from 'typedi';
 
 // const logger = (action: IAction) => {
@@ -26,8 +26,6 @@ export class StoreClass<S extends object, A extends TAllActions> {
 
 	private middlewares: { action: (props: TMiddlewareProps<S, A>) => any }[] = [];
 
-	private _removedKeys = ['init', 'isInit', '_removedKeys'] as (keyof this)[];
-
 	private context: React.Context<{
 		state: S;
 		dispatch: TDispatch;
@@ -36,29 +34,19 @@ export class StoreClass<S extends object, A extends TAllActions> {
 		dispatch: TDispatch;
 	}>(this.defaultContext);
 
-	constructor(state: S, actions: A) {
-		this.actions = actions;
-		this.state = state;
-	}
-
-	init(state: S, actions: A) {
+	protected init(state: S, actions: A) {
 		if (this.isInit === false) {
 			this.isInit = true;
 			this.actions = actions;
 			this.state = cloneDeep(state);
-			this._removedKeys.forEach((item) => {
-				delete (StoreClass.prototype as any)[item];
-				delete this[item];
-			});
-			return { ...this.store, storeInstance: Container.get<StoreClass<S, A>>('StoreClass') };
+			return { ...this.store, storeInstance: this as StoreClass<S, A> };
 		}
 	}
 
 	private storeReducer: React.Reducer<S, TCaseAction> = (state, action) => {
-		const clone = cloneDeep(state);
-		this.actions[action.type](action.payload, clone as any);
-		console.log('clone', clone);
-		return clone;
+		this.state = cloneDeep(state);
+		this.actions[action.type](action.payload);
+		return this.state;
 	};
 
 	private useReducerWithMiddleware(): [S, TDispatch] {
@@ -99,11 +87,19 @@ export class StoreClass<S extends object, A extends TAllActions> {
 		return (this.middlewares = this.middlewares.concat(middleware));
 	}
 
+	protected getState() {
+		return this.state;
+	}
+
+	protected setState(state: S) {
+		this.state = cloneDeep({ ...this.state, ...state });
+	}
+
 	createMiddleware(...fnArr: ((props: TMiddlewareProps<S, A, `${keyof S & string}/${keyof A & string}`>) => any)[]) {
 		return this.setMiddlware(...fnArr.map((fn) => ({ action: fn })));
 	}
 }
 
 export const Store = <S extends TStore, A extends TAllActions>(state: S, actions: A) => {
-	return Container.get<StoreClass<S, A>>('StoreClass').init(cloneDeep(state), actions);
+	return Container.get<StoreClass<S, A>>('StoreClass')['init'](state, actions);
 };
