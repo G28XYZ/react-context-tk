@@ -2,19 +2,24 @@ import { assign, cloneDeep } from 'lodash';
 import { TSliceProps, TActionPayload, TActions, TAllActions, TStore } from '../types';
 import Container, { Inject, Service } from 'typedi';
 import { StoreClass } from '../store';
+import { StoreTestCls } from '../store-test';
 
 type TReducer<S extends TStore> = TAllActions<S>;
 
 @Service({ id: 'Slice', transient: true })
 export class Slice<State extends TStore, Reducers extends TReducer<State>, Name extends string> {
-	@Inject('StoreClass') private storeInstance: StoreClass<any, any> = undefined;
-	private _name: Name = undefined;
-	private _reducers: Reducers = undefined;
-	private _sliceActions = {} as TActions<State, Reducers>;
+	@Inject('StoreTestCls') private storeInstance: StoreTestCls<any, any> = null;
+
+	private _name: Name = null;
+	private _reducers: Reducers = null;
+	private _sliceActions: TActions<State, Reducers> = null;
 
 	protected init(props: TSliceProps<State, Reducers, Name>) {
 		if (!props.name) {
-			throw Error('The name for the slice must be set');
+			throw Error('The slice name cannot be empty and must be set.');
+		}
+		if (this.storeInstance['checkSliceName'](props.name as string)) {
+			throw Error(`The name '${props.name}' for the slice must be uniq, change another name slice.`);
 		}
 		this._name = props.name;
 		this._reducers = props.reducers;
@@ -32,6 +37,7 @@ export class Slice<State extends TStore, Reducers extends TReducer<State>, Name 
 		return this.storeInstance['getState']()[this.name];
 	}
 	private get reducer(): State {
+		!this._sliceActions && (this._sliceActions = {} as TActions<State, Reducers>);
 		for (const f in this._reducers) {
 			const originalFuncName = this._reducers[f].name;
 			if (!originalFuncName.includes(`${this.name}/${originalFuncName}`)) {

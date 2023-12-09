@@ -14,13 +14,13 @@ type TMiddlewareProps<S extends object = undefined, A extends TAllActions = TAll
 	readonly dispatch: TDispatch;
 };
 
+const defaultFn = <T>(state: T) => state;
+
 @Service('StoreClass')
 export class StoreClass<S extends object, A extends TAllActions> {
-	parent: typeof StoreClass.prototype = undefined;
+	private _actions: A = null;
 
-	private _actions: A = undefined;
-
-	protected _state: S = undefined;
+	protected _state: S = null;
 
 	private _defaultContext = { state: this._state, dispatch: () => ({}) };
 
@@ -54,9 +54,7 @@ export class StoreClass<S extends object, A extends TAllActions> {
 	private useReducerWithMiddleware(): [S, TDispatch] {
 		const [state, dispatch] = React.useReducer(this.storeReducer, this._state);
 		const dispatchWithMiddleware: TDispatch = async (action) => {
-			await Promise.allSettled(
-				this.middlewares.map((item) => item.action.call(this, { action, state, actions: this._actions, dispatch }))
-			);
+			await Promise.allSettled(this.middlewares.map((item) => item.action.call(this, { action, state, actions: this._actions, dispatch })));
 			dispatch(action);
 		};
 		return [state, dispatchWithMiddleware];
@@ -70,12 +68,9 @@ export class StoreClass<S extends object, A extends TAllActions> {
 
 	private useStore<T>(fn: (state: S) => T): [state: T, { actions: A; dispatch: TDispatch }];
 	private useStore(): [state: S, { actions: A; dispatch: TDispatch }];
-	private useStore<T>(fn?: (state: S) => T) {
+	private useStore<T>(fn = defaultFn<S>) {
 		const { state, dispatch } = React.useContext(this.context);
-		if (fn) {
-			return [fn(state), { dispatch, actions: this._actions }];
-		}
-		return [state, { dispatch, actions: this._actions }];
+		return [fn(state), { dispatch, actions: this._actions }];
 	}
 
 	get store() {
@@ -100,6 +95,8 @@ export class StoreClass<S extends object, A extends TAllActions> {
 	createMiddleware(...fnArr: ((props: TMiddlewareProps<S, A, `${keyof S & string}/${keyof A & string}`>) => any)[]) {
 		return this.setMiddleware(...fnArr.map((fn) => ({ action: fn })));
 	}
+
+	protected checkSliceName(name: keyof S) {}
 }
 
 export const Store = <S extends TStore, A extends TAllActions>(state: S, actions: A) => {

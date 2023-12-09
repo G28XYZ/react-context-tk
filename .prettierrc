@@ -3,5 +3,6 @@
 	"printWidth": 140,
 	"singleAttributePerLine": true,
 	"jsxSingleQuote": false,
-	"bracketSameLine": true
+	"bracketSameLine": true,
+	"tabWidth": 2
 }
