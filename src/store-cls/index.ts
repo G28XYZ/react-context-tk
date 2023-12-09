@@ -47,6 +47,7 @@ export class StoreClass<S extends object, A extends TAllActions> {
 			// 	delete (StoreClass.prototype as any)[item];
 			// 	delete this[item];
 			// });
+			console.log(actions);
 			return { ...this.store, storeInstance: this.parent };
 		}
 	}

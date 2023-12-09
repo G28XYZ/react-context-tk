@@ -2,18 +2,20 @@ import React from 'react';
 import { TAllActions, type TCaseAction, TDispatch, TStore } from '../types';
 import { assign, bind, cloneDeep } from 'lodash';
 import Container, { Service } from 'typedi';
+import { NestedKeys } from '../utils';
 
 // const logger = (action: IAction) => {
 // 	console.log("logger:", action);
 // };
+type TActionString<A extends Record<keyof A, TAllActions>> = `${keyof A & string}/${NestedKeys<A> & string}`;
 export type TMiddlewareTest<S extends StoreTestCls<any, any>> = Parameters<S['createMiddleware']>[0];
 type TMiddlewareProps<
 	S extends object = undefined,
-	A extends Record<string, TAllActions> = Record<string, TAllActions>,
+	A extends Record<keyof A, TAllActions> = Record<string, TAllActions>,
 	K extends string = undefined
 > = {
-	readonly action: Readonly<TCaseAction<A[string], K extends undefined ? keyof A[string] : K>>;
-	readonly actions: Readonly<A>;
+	readonly action: TCaseAction<A[keyof A], K extends undefined ? string : TActionString<A>>;
+	readonly actions: { [K in keyof A]: A[K] };
 	readonly state: Readonly<S>;
 	readonly dispatch: TDispatch;
 };
@@ -39,11 +41,12 @@ export class StoreTestCls<S extends object, A extends { [K: string]: TAllActions
 	}>(this._defaultContext);
 
 	init(state: S, actions: A) {
+		console.log(this._actions);
 		if (this._isInit === false) {
 			this._isInit = true;
 			this._actions = actions;
 			this._state = cloneDeep(state);
-			return { ...this.store, storeInstance: this as typeof StoreTestCls.prototype };
+			return { ...this.store, storeInstance: this as StoreTestCls<S, A> };
 		}
 	}
 
@@ -58,7 +61,7 @@ export class StoreTestCls<S extends object, A extends { [K: string]: TAllActions
 		const dispatchWithMiddleware: TDispatch = async (action) => {
 			await Promise.allSettled(
 				this._middlewares
-					.map((item) => item.action.call(this, { action, state, actions: this._actions, dispatch }))
+					.map((item) => item.action.call(this, { action, state, actions: this.filterAction, dispatch }))
 					.concat((async () => dispatch(action)).call(this))
 			);
 		};
@@ -76,9 +79,9 @@ export class StoreTestCls<S extends object, A extends { [K: string]: TAllActions
 	private useStore<T>(fn?: (state: S) => T) {
 		const { dispatch } = React.useContext(this.context);
 		if (fn) {
-			return [fn(this._state), { dispatch, actions: this._actions }];
+			return [fn(this._state), { dispatch, actions: this.filterAction }];
 		}
-		return [this._state, { dispatch, actions: this._actions }];
+		return [this._state, { dispatch, actions: this.filterAction }];
 	}
 
 	get store() {
@@ -96,13 +99,11 @@ export class StoreTestCls<S extends object, A extends { [K: string]: TAllActions
 		this._state = cloneDeep({ ...this._state, ...state });
 	}
 
-	private setMiddleware(
-		...middleware: { action: (props: TMiddlewareProps<S, A, `${keyof S & string}/${keyof A[keyof S & string] & string}`>) => any }[]
-	) {
+	private setMiddleware(...middleware: { action: (props: TMiddlewareProps<S, A, TActionString<A>>) => any }[]) {
 		return (this._middlewares = this._middlewares.concat(middleware));
 	}
 
-	createMiddleware(...fnArr: ((props: TMiddlewareProps<S, A, `${keyof S & string}/${keyof A[keyof S & string] & string}`>) => any)[]) {
+	createMiddleware(...fnArr: ((props: TMiddlewareProps<S, A, TActionString<A>>) => any)[]) {
 		return this.setMiddleware(...fnArr.map((fn) => ({ action: fn })));
 	}
 
@@ -110,6 +111,19 @@ export class StoreTestCls<S extends object, A extends { [K: string]: TAllActions
 		if (this._state) {
 			return name in this._state;
 		}
+	}
+
+	private get filterAction() {
+		const clone = cloneDeep<A>(this._actions);
+		for (const name in clone) {
+			for (const action in clone[name]) {
+				if (action.includes(`${name}/`)) {
+					clone[name][action] = undefined;
+					delete clone[name][action];
+				}
+			}
+		}
+		return clone;
 	}
 }
 

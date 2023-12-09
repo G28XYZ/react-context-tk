@@ -12,7 +12,7 @@ export class Slice<State extends TStore, Reducers extends TReducer<State>, Name 
 
 	private _name: Name = null;
 	private _reducers: Reducers = null;
-	private _sliceActions: TActions<State, Reducers> = null;
+	private _sliceActions = {} as TActions<State, Reducers>;
 
 	protected init(props: TSliceProps<State, Reducers, Name>) {
 		if (!props.name) {
@@ -24,11 +24,16 @@ export class Slice<State extends TStore, Reducers extends TReducer<State>, Name 
 		this._name = props.name;
 		this._reducers = props.reducers;
 		this.storeInstance['setState']({ [this._name]: cloneDeep(props.initState) });
+		// this.storeInstance['_actions'] = { ...this.storeInstance['_actions'], [this._name]: this._sliceActions };
 		return this;
 	}
 
 	get actions() {
 		return this._sliceActions;
+		return Object.keys(this._sliceActions).reduce(
+			(obj, key) => (key.includes(`${this._name}/`) ? obj : { ...obj, [key]: this._sliceActions[key] }),
+			{} as TActions<State, Reducers>
+		);
 	}
 	get name() {
 		return this._name;
@@ -37,7 +42,6 @@ export class Slice<State extends TStore, Reducers extends TReducer<State>, Name 
 		return this.storeInstance['getState']()[this.name];
 	}
 	private get reducer(): State {
-		!this._sliceActions && (this._sliceActions = {} as TActions<State, Reducers>);
 		for (const f in this._reducers) {
 			const originalFuncName = this._reducers[f].name;
 			if (!originalFuncName.includes(`${this.name}/${originalFuncName}`)) {
