@@ -20,7 +20,7 @@
 		"noImplicitReturns": false, // Сообщить об ошибке, когда не все пути кода в функции возвращают значение?
 		"noImplicitThis": false, // Показывать ошибку на "this", если где-то задан тип "any".
 		"noUnusedParameters": false, // Показывать ошибку, если где-то найдены неиспользуемые параметры.
-		"noUnusedLocals": false, // Показывать ошибку, если где-то найдены неиспользуемые локальные значения.
+		"noUnusedLocals": true, // Показывать ошибку, если где-то найдены неиспользуемые локальные значения.
 		"emitDecoratorMetadata": true,
 		"experimentalDecorators": true
 	},

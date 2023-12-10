@@ -18,7 +18,12 @@ export class SliceModel<State extends TStore, Reducers extends TReducer<State>, 
 			throw Error('The slice name cannot be empty and must be set.');
 		}
 		if (this.storeInstance['checkSliceName'](props.name as string)) {
-			throw Error(`The name '${props.name}' for the slice must be uniq, change another name slice.`);
+			throw Error(
+				`The slice with the name '${props.name}' has already been created. The name '${props.name}' for the slice must be uniq, change another name slice.`
+			);
+		}
+		if (!/^[a-zA-Z \d.'-_]+$/g.test(props.name)) {
+			throw Error(`The incorect name '${props.name}'. The name for the slice must be include only latin char, numbers and '-_.' symbols.`);
 		}
 		this._name = props.name;
 		this._reducers = props.reducers;
@@ -29,17 +34,15 @@ export class SliceModel<State extends TStore, Reducers extends TReducer<State>, 
 
 	get actions() {
 		return this._sliceActions;
-		return Object.keys(this._sliceActions).reduce(
-			(obj, key) => (key.includes(`${this._name}/`) ? obj : { ...obj, [key]: this._sliceActions[key] }),
-			{} as TActions<State, Reducers>
-		);
 	}
 	get name() {
 		return this._name;
 	}
+
 	get state(): State {
-		return this.storeInstance['getState']()[this.name];
+		return new Proxy(Object.seal(this.storeInstance['getState']()[this.name]), {});
 	}
+
 	private get reducer(): State {
 		for (const f in this._reducers) {
 			const originalFuncName = this._reducers[f].name;
