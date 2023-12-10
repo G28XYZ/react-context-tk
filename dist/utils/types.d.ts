@@ -5,4 +5,4 @@ export type Keys<T, K extends PropertyKey> = T extends object ? {
 /** Вложенные ключи объекта */
 export type NestedKeys<T> = Keys<T, keyof T>;
 /**  */
-export type TDecorator<D = any> = (target: Object, name: string | symbol, descriptor: D) => D;
+export type TDecorator<D = any> = (target: object, name: string | symbol, descriptor: D) => D;

@@ -7,7 +7,6 @@ export type TCaseAction<A extends TAllActions = TAllActions, K extends keyof A =
     type: K;
     payload: Parameters<A[keyof A]>[1];
 };
-export type TPayload<S, P = never> = P;
 export type TSliceAction<S extends TStore = undefined, P = undefined> = (state?: S, payload?: P) => any;
 export type TSliceProps<S extends TStore, R extends TAllActions<S>, Name> = {
     name: Name extends '' | null | undefined | number | object ? never : Name;

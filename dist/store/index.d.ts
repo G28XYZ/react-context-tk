@@ -4,12 +4,12 @@ import { NestedKeys } from '../utils';
 type TActionString<A extends Record<keyof A, any>> = `${keyof A & string}/${NestedKeys<A> & string}`;
 export type TMiddleware<S extends StoreModel<any, any>> = Parameters<S['createMiddleware']>[0];
 type TMiddlewareProps<S extends object = undefined, A extends Record<keyof A, TAllActions> = Record<string, TAllActions>> = {
-    readonly action: TCaseAction<A[keyof A], TActionString<A>>;
-    readonly actions: {
+    readonly action?: TCaseAction<A[keyof A], TActionString<A>>;
+    readonly actions?: {
         [K in keyof A]: A[K];
     };
-    readonly state: Readonly<S>;
-    readonly dispatch: TDispatch;
+    readonly state?: Readonly<S>;
+    readonly dispatch?: TDispatch;
 };
 export declare class StoreModel<S extends object, A extends {
     [K: string]: TAllActions;
@@ -63,7 +63,7 @@ export declare class StoreModel<S extends object, A extends {
     protected setState(state: S): void;
     private setMiddleware;
     createMiddleware(...fnArr: ((props: TMiddlewareProps<S, A>) => any)[]): {
-        action: (props: TMiddlewareProps<S, A>) => any;
+        action?: (props: TMiddlewareProps<S, A>) => any;
     }[];
     protected checkSliceName(name: keyof S): boolean;
     private get filterAction();
