@@ -27,6 +27,9 @@ module.exports = (env) => {
 			libraryTarget: 'umd',
 		},
 		externals: ['react', 'react-dom', 'lodash'],
+		optimization: {
+			minimize: true,
+		},
 		module: {
 			rules: [
 				{
