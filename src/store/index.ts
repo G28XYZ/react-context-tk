@@ -1,32 +1,36 @@
 import React from 'react';
-import { TAllActions, TCaseAction, TDispatch, TStore } from '../types';
-import { cloneDeep } from 'lodash';
+import { TAllActions, type TCaseAction, TDispatch, TStore } from '../types';
+import { assign, bind, cloneDeep } from 'lodash';
 import Container, { Service } from 'typedi';
+import { NestedKeys } from '../utils';
 
 // const logger = (action: IAction) => {
 // 	console.log("logger:", action);
 // };
-export type TMiddleware<S extends StoreClass<any, any>> = Parameters<S['createMiddleware']>[0];
-type TMiddlewareProps<S extends object = undefined, A extends TAllActions = TAllActions, K extends string = undefined> = {
-	readonly action: Readonly<TCaseAction<A, K extends undefined ? keyof A : K>>;
-	readonly actions: Readonly<A>;
+type TActionString<A extends Record<keyof A, TAllActions>> = `${keyof A & string}/${NestedKeys<A> & string}`;
+export type TMiddleware<S extends StoreModel<any, any>> = Parameters<S['createMiddleware']>[0];
+type TMiddlewareProps<
+	S extends object = undefined,
+	A extends Record<keyof A, TAllActions> = Record<string, TAllActions>,
+	K extends string = undefined
+> = {
+	readonly action: TCaseAction<A[keyof A], K extends undefined ? string : TActionString<A>>;
+	readonly actions: { [K in keyof A]: A[K] };
 	readonly state: Readonly<S>;
 	readonly dispatch: TDispatch;
 };
 
-const defaultFn = <T>(state: T) => state;
+@Service('StoreModel')
+export class StoreModel<S extends object, A extends { [K: string]: TAllActions }> {
+	private _actions: A = undefined;
 
-@Service('StoreClass')
-export class StoreClass<S extends object, A extends TAllActions> {
-	private _actions: A = null;
-
-	protected _state: S = null;
+	protected _state: S = undefined;
 
 	private _defaultContext = { state: this._state, dispatch: () => ({}) };
 
 	private _isInit = false;
 
-	private middlewares: { action: (props: TMiddlewareProps<S, A>) => any }[] = [];
+	private _middlewares: { action: (props: TMiddlewareProps<S, A>) => any }[] = [];
 
 	private context: React.Context<{
 		state: S;
@@ -36,26 +40,30 @@ export class StoreClass<S extends object, A extends TAllActions> {
 		dispatch: TDispatch;
 	}>(this._defaultContext);
 
-	protected init(state: S, actions: A) {
+	init(state: S, actions: A) {
+		console.log(this._actions);
 		if (this._isInit === false) {
 			this._isInit = true;
 			this._actions = actions;
 			this._state = cloneDeep(state);
-			return { ...this.store, storeInstance: this as StoreClass<S, A> };
+			return { ...this.store, storeInstance: this as StoreModel<S, A> };
 		}
 	}
 
-	private storeReducer: React.Reducer<S, TCaseAction> = (state, action) => {
+	private storeReducer = (state: S, action: TCaseAction) => {
 		this._state = cloneDeep(state);
-		this._actions[action.type](action.payload);
+		this._actions[action.type.split('/')[0]][action.type](action.payload);
 		return this._state;
 	};
 
 	private useReducerWithMiddleware(): [S, TDispatch] {
 		const [state, dispatch] = React.useReducer(this.storeReducer, this._state);
 		const dispatchWithMiddleware: TDispatch = async (action) => {
-			await Promise.allSettled(this.middlewares.map((item) => item.action.call(this, { action, state, actions: this._actions, dispatch })));
-			dispatch(action);
+			await Promise.allSettled(
+				this._middlewares
+					.map((item) => item.action.call(this, { action, state, actions: this.filterAction, dispatch }))
+					.concat((async () => dispatch(action)).call(this))
+			);
 		};
 		return [state, dispatchWithMiddleware];
 	}
@@ -68,9 +76,12 @@ export class StoreClass<S extends object, A extends TAllActions> {
 
 	private useStore<T>(fn: (state: S) => T): [state: T, { actions: A; dispatch: TDispatch }];
 	private useStore(): [state: S, { actions: A; dispatch: TDispatch }];
-	private useStore<T>(fn = defaultFn<S>) {
-		const { state, dispatch } = React.useContext(this.context);
-		return [fn(state), { dispatch, actions: this._actions }];
+	private useStore<T>(fn?: (state: S) => T) {
+		const { dispatch } = React.useContext(this.context);
+		if (fn) {
+			return [fn(this._state), { dispatch, actions: this.filterAction }];
+		}
+		return [this._state, { dispatch, actions: this.filterAction }];
 	}
 
 	get store() {
@@ -78,10 +89,6 @@ export class StoreClass<S extends object, A extends TAllActions> {
 			useStore: this.useStore.bind(this),
 			StoreProvider: Object.defineProperty(this.storeProvider, 'name', { value: 'StoreProvider' }),
 		};
-	}
-
-	private setMiddleware(...middleware: { action: (props: TMiddlewareProps<S, A, `${keyof S & string}/${keyof A & string}`>) => any }[]) {
-		return (this.middlewares = this.middlewares.concat(middleware));
 	}
 
 	protected getState() {
@@ -92,13 +99,35 @@ export class StoreClass<S extends object, A extends TAllActions> {
 		this._state = cloneDeep({ ...this._state, ...state });
 	}
 
-	createMiddleware(...fnArr: ((props: TMiddlewareProps<S, A, `${keyof S & string}/${keyof A & string}`>) => any)[]) {
+	private setMiddleware(...middleware: { action: (props: TMiddlewareProps<S, A, TActionString<A>>) => any }[]) {
+		return (this._middlewares = this._middlewares.concat(middleware));
+	}
+
+	createMiddleware(...fnArr: ((props: TMiddlewareProps<S, A, TActionString<A>>) => any)[]) {
 		return this.setMiddleware(...fnArr.map((fn) => ({ action: fn })));
 	}
 
-	protected checkSliceName(name: keyof S) {}
+	protected checkSliceName(name: keyof S) {
+		if (this._state) {
+			return name in this._state;
+		}
+	}
+
+	private get filterAction() {
+		const clone = cloneDeep<A>(this._actions);
+		for (const name in clone) {
+			for (const action in clone[name]) {
+				if (action.includes(`${name}/`)) {
+					clone[name][action] = undefined;
+					delete clone[name][action];
+				}
+			}
+		}
+		return clone;
+	}
 }
 
-export const Store = <S extends TStore, A extends TAllActions>(state: S, actions: A) => {
-	return Container.get<StoreClass<S, A>>('StoreClass')['init'](state, actions);
+export const Store = <S extends TStore, A extends Record<string, TAllActions>>(state: S, actions: A) => {
+	const instance = Container.get<StoreModel<S, A>>('StoreModel');
+	return instance.init(state, actions);
 };

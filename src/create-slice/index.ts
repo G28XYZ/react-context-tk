@@ -1,14 +1,13 @@
 import { assign, cloneDeep } from 'lodash';
 import { TSliceProps, TActionPayload, TActions, TAllActions, TStore } from '../types';
 import Container, { Inject, Service } from 'typedi';
-import { StoreClass } from '../store';
-import { StoreTestCls } from '../store-test';
+import { StoreModel } from '../store';
 
 type TReducer<S extends TStore> = TAllActions<S>;
 
-@Service({ id: 'Slice', transient: true })
-export class Slice<State extends TStore, Reducers extends TReducer<State>, Name extends string> {
-	@Inject('StoreTestCls') private storeInstance: StoreTestCls<any, any> = null;
+@Service({ id: 'SliceModel', transient: true })
+export class SliceModel<State extends TStore, Reducers extends TReducer<State>, Name extends string> {
+	@Inject('StoreModel') private storeInstance: StoreModel<any, any> = null;
 
 	private _name: Name = null;
 	private _reducers: Reducers = null;
@@ -69,5 +68,5 @@ export class Slice<State extends TStore, Reducers extends TReducer<State>, Name 
 }
 
 export function createSlice<S extends TStore, R extends TReducer<S>, N extends string>(props: TSliceProps<S, R, N>) {
-	return Container.get<Slice<S, R, N>>('Slice')['init'](props);
+	return Container.get<SliceModel<S, R, N>>('SliceModel')['init'](props);
 }
