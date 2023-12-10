@@ -1,3 +1,7 @@
+# Description
+
+This package is for using react context with functions similar to those in rudexjs/toolkit.
+
 # Install
 
 ```bash
@@ -13,8 +17,9 @@ import { Store, TSliceAction, createSlice } from 'react-context-tk';
 
 const initAppState = {
 	count: 0,
+	test: '',
+	isLoading: false,
 };
-
 const initOtherState = {
 	text: 'test',
 	test: {
@@ -63,13 +68,23 @@ const otherSlice = createSlice({
 });
 
 const store = {
-	...appSlice.store,
-	...otherSlice.store,
+	...appSlice.sliceStore,
+	...otherSlice.sliceStore,
 };
 
-const actions = { ...appSlice.actions, ...otherSlice.actions };
+const actions = { [appSlice.name]: appSlice.actions, [otherSlice.name]: otherSlice.actions };
 
-export const { useStore, StoreProvider } = Store(store, actions);
+export const { useStore, StoreProvider, storeInstance } = Store(store, actions);
+
+const actionMiddleware: TMiddleware<typeof storeInstance> = async (props) => {
+	switch (props.action.type) {
+		case 'app/onCount':
+			props.dispatch(props.actions.app.onFetching(true));
+			await fetch('https://swapi.dev/api/');
+			props.dispatch(props.actions.app.onFetching(false));
+	}
+};
+const middlewares = storeInstance.createMiddleware(actionMiddleware);
 ```
 
 ### app.tsx

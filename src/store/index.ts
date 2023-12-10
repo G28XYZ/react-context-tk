@@ -68,7 +68,7 @@ export class StoreModel<S extends object, A extends { [K: string]: TAllActions }
 		return [state, dispatchWithMiddleware];
 	}
 
-	private storeProvider: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
+	private storeProvider: React.FC<{ children?: React.ReactNode; optionalState?: object }> = ({ children }) => {
 		const [state, dispatch] = this.useReducerWithMiddleware();
 		const value = React.useMemo(() => ({ state, dispatch }), [state, dispatch]);
 		return React.createElement(this.context.Provider, { value, children });
