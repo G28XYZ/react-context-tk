@@ -13,7 +13,7 @@ npm i react-context-tk
 ### store.ts
 
 ```typescript
-import { Store, TSliceAction, createSlice } from 'react-context-tk';
+import { Store, TSliceAction, createSlice, TMiddleware } from 'react-context-tk';
 
 const initAppState = {
   count: 0,
@@ -56,6 +56,9 @@ const appSlice = createSlice({
     test(state, payload: number) {
       console.log(state, payload);
     },
+    onFetching(state, payload: boolean) {
+      state.isLoading = payload;
+    },
   },
 });
 
@@ -72,7 +75,10 @@ const store = {
   ...otherSlice.sliceStore,
 };
 
-const actions = { [appSlice.name]: appSlice.actions, [otherSlice.name]: otherSlice.actions };
+const actions = {
+  [appSlice.name]: appSlice.actions,
+  [otherSlice.name]: otherSlice.actions,
+};
 
 export const { useStore, StoreProvider, storeInstance } = Store(store, actions);
 
@@ -84,7 +90,10 @@ const actionMiddleware: TMiddleware<typeof storeInstance> = async (props) => {
       props.dispatch(props.actions.app.onFetching(false));
   }
 };
+
 const middlewares = storeInstance.createMiddleware(actionMiddleware);
+
+console.log(middlewares, storeInstance);
 ```
 
 ### app.tsx
@@ -96,21 +105,27 @@ import { StoreProvider, useStore } from './store';
 export const Counter = () => {
   const [[count, text, store], { dispatch, actions }] = useStore((state) => [state.app.count, state.test.text, state]);
 
-  const [fullStore] = useStore();
+  console.log('store', store);
 
   return (
     <div>
-      <button
-        style={{ marginRight: 10, width: 50 }}
-        onClick={() => dispatch(actions.app.onCount(count - 1))}
-        children=" - "
-      />
-      <button
-        style={{ marginRight: 10, width: 50 }}
-        onClick={() => dispatch(actions.app.onCount(count + 1))}
-        children=" + "
-      />
-      <div>{count}</div>
+      <div
+        style={{
+          pointerEvents: store.app.isLoading ? 'none' : 'auto',
+          opacity: store.app.isLoading ? 0.5 : 1,
+        }}>
+        <button
+          style={{ marginRight: 10, width: 50 }}
+          onClick={() => dispatch(actions.app.onCount(count - 1))}
+          children=" - "
+        />
+        <button
+          style={{ marginRight: 10, width: 50 }}
+          onClick={() => dispatch(actions.app.onCount(count + 1))}
+          children=" + "
+        />
+        <div>{count}</div>
+      </div>
       <input
         value={text}
         onChange={(e) =>

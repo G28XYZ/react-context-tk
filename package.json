@@ -9,7 +9,7 @@
     "type": "git",
     "url": "https://github.com/G28XYZ/react-context-tk"
   },
-  "private": true,
+  "private": false,
   "description": "React Context API as @reduxjs/toolkit, use only react app",
   "type": "module",
   "scripts": {

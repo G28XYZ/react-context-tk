@@ -64,7 +64,7 @@ let f = class {
   }
   useReducerWithMiddleware() {
     const [t, e] = h.useReducer(this.storeReducer, this._state), n = (r) => y(this, void 0, void 0, function* () {
-      console.log(r), yield Promise.allSettled(this._middlewares.map((s) => s.action.call(this, {
+      yield Promise.allSettled(this._middlewares.map((s) => s.action.call(this, {
         action: r,
         state: this.proxyState,
         actions: this.filterAction,
@@ -100,7 +100,7 @@ let f = class {
     return this._middlewares = this._middlewares.concat(t);
   }
   createMiddleware(...t) {
-    return this.setMiddleware(t.map((e) => ({ action: e })));
+    return this.setMiddleware(...t.map((e) => ({ action: e })));
   }
   checkSliceName(t) {
     if (this._state)

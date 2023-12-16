@@ -62,7 +62,6 @@ export class StoreModel<S extends object, A extends { [K: string]: TAllActions }
   private useReducerWithMiddleware(): [S, TDispatch] {
     const [_, dispatch] = React.useReducer(this.storeReducer, this._state);
     const dispatchWithMiddleware: TDispatch = async (action: any) => {
-      console.log(action);
       await Promise.allSettled(
         this._middlewares
           .map((item) =>
@@ -127,7 +126,7 @@ export class StoreModel<S extends object, A extends { [K: string]: TAllActions }
   }
 
   createMiddleware(...fnArr: ((props: TMiddlewareProps<S, A>) => any)[]) {
-    return this.setMiddleware(fnArr.map((fn) => ({ action: fn })));
+    return this.setMiddleware(...fnArr.map((action) => ({ action })));
   }
 
   protected checkSliceName(name: keyof S) {
