@@ -1,5 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import Inspect from 'vite-plugin-inspect';
+import checker from 'vite-plugin-checker';
 
 import typescript from '@rollup/plugin-typescript';
 import path from 'path';
@@ -7,7 +9,16 @@ import { typescriptPaths } from 'rollup-plugin-typescript-paths';
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    Inspect(),
+    checker({
+      typescript: true,
+      eslint: {
+        lintCommand: 'eslint "./src/**/*.{ts,tsx}"',
+      },
+    }),
+  ],
   resolve: {
     alias: [
       {
@@ -24,8 +35,9 @@ export default defineConfig({
     minify: true,
     reportCompressedSize: true,
     lib: {
-      entry: path.resolve(__dirname, 'src/main.ts'),
-      fileName: 'main',
+      entry: path.resolve(__dirname, 'src/index.ts'),
+      name: 'ReactContextToolkit',
+      fileName: 'index',
       formats: ['es', 'cjs'],
     },
     rollupOptions: {

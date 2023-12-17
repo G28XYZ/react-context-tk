@@ -17,7 +17,8 @@
     "build": "vite build",
     "build:watch": "vite build --watch",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "tsc": "tsc --noEmit -- --watch"
   },
   "peerDependencies": {
     "lodash": "^4.17.21",
@@ -25,9 +26,15 @@
     "reflect-metadata": "^0.2.1",
     "typedi": "^0.10.0"
   },
-  "main": "./dist/main.cjs.js",
-  "module": "./dist/main.js",
-  "typings": "./dist/main.d.ts",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "typings": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
   "files": [
     "dist"
   ],
@@ -39,11 +46,16 @@
     "@typescript-eslint/eslint-plugin": "^6.14.0",
     "@typescript-eslint/parser": "^6.14.0",
     "@vitejs/plugin-react": "^4.2.1",
-    "eslint": "^8.55.0",
+    "eslint": "^8.56.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
+    "install": "^0.13.0",
+    "npm": "^10.2.5",
     "rollup-plugin-typescript-paths": "^1.4.0",
-    "vite": "^5.0.8"
+    "typescript": "^5.3.3",
+    "vite": "^5.0.8",
+    "vite-plugin-checker": "^0.6.2",
+    "vite-plugin-inspect": "^0.8.1"
   },
   "license": "MIT"
 }

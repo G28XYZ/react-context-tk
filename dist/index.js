@@ -1,50 +1,50 @@
-import { cloneDeep as l, assign as S } from "lodash";
-import g, { Service as b, Inject as M } from "typedi";
+import { cloneDeep as l, assign as y } from "lodash";
+import b, { Service as g, Inject as M } from "typedi";
 import h from "react";
-function _(i, t, e, n) {
-  var r = arguments.length, s = r < 3 ? t : n === null ? n = Object.getOwnPropertyDescriptor(t, e) : n, o;
+function _(i, t, e, s) {
+  var r = arguments.length, n = r < 3 ? t : s === null ? s = Object.getOwnPropertyDescriptor(t, e) : s, o;
   if (typeof Reflect == "object" && typeof Reflect.decorate == "function")
-    s = Reflect.decorate(i, t, e, n);
+    n = Reflect.decorate(i, t, e, s);
   else
     for (var a = i.length - 1; a >= 0; a--)
-      (o = i[a]) && (s = (r < 3 ? o(s) : r > 3 ? o(t, e, s) : o(t, e)) || s);
-  return r > 3 && s && Object.defineProperty(t, e, s), s;
+      (o = i[a]) && (n = (r < 3 ? o(n) : r > 3 ? o(t, e, n) : o(t, e)) || n);
+  return r > 3 && n && Object.defineProperty(t, e, n), n;
 }
-function j(i, t) {
+function v(i, t) {
   if (typeof Reflect == "object" && typeof Reflect.metadata == "function")
     return Reflect.metadata(i, t);
 }
-function y(i, t, e, n) {
-  function r(s) {
-    return s instanceof e ? s : new e(function(o) {
-      o(s);
+function S(i, t, e, s) {
+  function r(n) {
+    return n instanceof e ? n : new e(function(o) {
+      o(n);
     });
   }
-  return new (e || (e = Promise))(function(s, o) {
+  return new (e || (e = Promise))(function(n, o) {
     function a(c) {
       try {
-        u(n.next(c));
+        u(s.next(c));
       } catch (d) {
         o(d);
       }
     }
-    function w(c) {
+    function j(c) {
       try {
-        u(n.throw(c));
+        u(s.throw(c));
       } catch (d) {
         o(d);
       }
     }
     function u(c) {
-      c.done ? s(c.value) : r(c.value).then(a, w);
+      c.done ? n(c.value) : r(c.value).then(a, j);
     }
-    u((n = n.apply(i, t || [])).next());
+    u((s = s.apply(i, t || [])).next());
   });
 }
 let f = class {
   constructor() {
     this._actions = void 0, this._state = void 0, this._defaultContext = { state: this._state, dispatch: () => ({}) }, this._isInit = !1, this._middlewares = [], this.context = h.createContext(this._defaultContext), this.storeReducer = (t, e) => (this._state = l(t), this.onTry(() => this._actions[e.type.split("/")[0]][e.type](e.payload)), this._state), this.storeProvider = ({ children: t }) => {
-      const [e, n] = this.useReducerWithMiddleware(), r = h.useMemo(() => ({ state: e, dispatch: n }), [e, n]);
+      const [e, s] = this.useReducerWithMiddleware(), r = h.useMemo(() => ({ state: e, dispatch: s }), [e, s]);
       return h.createElement(this.context.Provider, {
         value: Object.seal(r),
         children: t
@@ -63,17 +63,17 @@ let f = class {
     }
   }
   useReducerWithMiddleware() {
-    const [t, e] = h.useReducer(this.storeReducer, this._state), n = (r) => y(this, void 0, void 0, function* () {
-      yield Promise.allSettled(this._middlewares.map((s) => s.action.call(this, {
+    const [t, e] = h.useReducer(this.storeReducer, this._state), s = (r) => S(this, void 0, void 0, function* () {
+      yield Promise.allSettled(this._middlewares.map((n) => n.action.call(this, {
         action: r,
         state: this.proxyState,
         actions: this.filterAction,
         dispatch: e
-      })).concat((() => y(this, void 0, void 0, function* () {
+      })).concat((() => S(this, void 0, void 0, function* () {
         return e(r);
       })).call(this)));
     });
-    return [this._state, n];
+    return [this._state, s];
   }
   useStore(t) {
     const { dispatch: e } = h.useContext(this.context);
@@ -109,15 +109,15 @@ let f = class {
   get filterAction() {
     const t = l(this._actions);
     for (const e in t)
-      for (const n in t[e])
-        n.includes(`${e}/`) && (t[e][n] = void 0, delete t[e][n]);
+      for (const s in t[e])
+        s.includes(`${e}/`) && (t[e][s] = void 0, delete t[e][s]);
     return t;
   }
 };
 f = _([
-  b("StoreModel")
+  g("StoreModel")
 ], f);
-const R = (i, t) => g.get("StoreModel").init(i, t);
+const P = (i, t) => b.get("StoreModel").init(i, t);
 let m = class {
   constructor() {
     this.storeInstance = null, this._name = null, this._reducers = null, this._sliceActions = {};
@@ -144,11 +144,11 @@ let m = class {
     for (const t in this._reducers) {
       const e = this._reducers[t].name;
       if (!e.includes(`${this.name}/${e}`)) {
-        const n = `${this.name}/${e}`, r = this._reducers[t].bind(this);
-        S(this._sliceActions, {
-          [n]: (s) => (r(this.state, s), { [this.name]: this.state })
-        }), S(this._sliceActions, {
-          [e]: (s) => ({ type: n, payload: s })
+        const s = `${this.name}/${e}`, r = this._reducers[t].bind(this);
+        y(this._sliceActions, {
+          [s]: (n) => (r(this.state, n), { [this.name]: this.state })
+        }), y(this._sliceActions, {
+          [e]: (n) => ({ type: s, payload: n })
         });
       }
     }
@@ -160,22 +160,25 @@ let m = class {
 };
 _([
   M("StoreModel"),
-  j("design:type", f)
+  v("design:type", f)
 ], m.prototype, "storeInstance", void 0);
 m = _([
-  b({ id: "SliceModel", transient: !0 })
+  g({ id: "SliceModel", transient: !0 })
 ], m);
-function P(i) {
-  return g.get("SliceModel").init(i);
+function T(i) {
+  return b.get("SliceModel").init(i);
 }
-const p = Array, $ = String, T = Date, v = "isArray" in p ? p.isArray : (i) => toString.call(i) === "[object Array]", C = typeof document < "u" && typeof document.getElementsByTagName("body") == "function" ? (i) => !!i && toString.call(i) === "[object Function]" : (i) => !!i && typeof i == "function", N = (i, t) => i == null || (t ? !1 : i === "") || v(i) && i.length === 0;
+const p = Array, w = "isArray" in p ? p.isArray : (i) => toString.call(i) === "[object Array]", A = typeof document < "u" && typeof document.getElementsByTagName("body") == "function" ? (i) => !!i && toString.call(i) === "[object Function]" : (i) => !!i && typeof i == "function", x = (i, t) => i == null || (t ? !1 : i === "") || w(i) && i.length === 0, C = {
+  array: {
+    IsArray: w
+  },
+  object: {
+    IsEmpty: x,
+    IsFunction: A
+  }
+};
 export {
-  p as ESArray,
-  T as ESDate,
-  $ as ESString,
-  v as IsArray,
-  N as IsEmpty,
-  C as IsFunction,
-  R as Store,
-  P as createSlice
+  P as Store,
+  C as Utils,
+  T as createSlice
 };

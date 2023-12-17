@@ -8,7 +8,6 @@ type TReducer<S extends TStore> = TAllActions<S>;
 @Service({ id: 'SliceModel', transient: true })
 export class SliceModel<State extends TStore, Reducers extends TReducer<State>, Name extends string> {
   @Inject('StoreModel') private storeInstance: StoreModel<any, any> = null;
-
   private _name: Name = null;
   private _reducers: Reducers = null;
   private _sliceActions = {} as TActions<State, Reducers>;

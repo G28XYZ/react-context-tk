@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "module": "esnext",
-    "target": "ES2016", // Тип кода создаваемого итогового файла.
+    "target": "ES2015", // Тип кода создаваемого итогового файла.
     "lib": ["dom", "dom.iterable", "esnext"],
     "sourceMap": true,
     "allowJs": true, // Разрешать компилировать файлы с JavaScript-кодом?
