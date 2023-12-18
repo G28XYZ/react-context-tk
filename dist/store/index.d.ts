@@ -15,50 +15,25 @@ export declare class StoreModel<S extends object, A extends {
     [K: string]: TAllActions;
 }> {
     private _actions;
-    protected _state: S;
+    private _state;
     private _defaultContext;
     private _isInit;
-    private _middlewares;
+    protected middlewares: {
+        action?: (props: TMiddlewareProps<S, A>) => any;
+    }[];
     private context;
     protected init(state: S, actions: A): {
-        storeInstance: StoreModel<S, A>;
-        useStore: {
-            <T>(fn: (state: S) => T): [state: T, {
-                actions: A;
-                dispatch: TDispatch;
-            }];
-            (): [state: S, {
-                actions: A;
-                dispatch: TDispatch;
-            }];
-        };
-        StoreProvider: React.FC<{
-            children?: React.ReactNode;
-            optionalState?: object;
+        context: React.Context<{
+            state: S;
+            dispatch: TDispatch<A[keyof A], `${keyof A & string}/${import("../utils").Keys<A, keyof A> & string}`>;
         }>;
+        actions: A;
+        instance: StoreModel<S, A>;
+        storeReducer: (state: S, action: TCaseAction) => S;
     };
     private onTry;
-    private storeReducer;
-    private useReducerWithMiddleware;
-    private storeProvider;
-    private useStore;
+    protected storeReducer: (state: S, action: TCaseAction) => S;
     get proxyState(): S;
-    get store(): {
-        useStore: {
-            <T>(fn: (state: S) => T): [state: T, {
-                actions: A;
-                dispatch: TDispatch;
-            }];
-            (): [state: S, {
-                actions: A;
-                dispatch: TDispatch;
-            }];
-        };
-        StoreProvider: React.FC<{
-            children?: React.ReactNode;
-            optionalState?: object;
-        }>;
-    };
     protected getState(): S;
     protected setState(state: S): void;
     private setMiddleware;
@@ -68,8 +43,7 @@ export declare class StoreModel<S extends object, A extends {
     protected checkSliceName(name: keyof S): boolean;
     private get filterAction();
 }
-export declare const Store: <S extends object, A extends Record<string, TAllActions>>(state: S, actions: A) => {
-    storeInstance: StoreModel<S, A>;
+export declare const Store: <S extends object, A extends Record<string, TAllActions>>(state: S, appActions: A) => {
     useStore: {
         <T>(fn: (state: S) => T): [state: T, {
             actions: A;
@@ -82,7 +56,7 @@ export declare const Store: <S extends object, A extends Record<string, TAllActi
     };
     StoreProvider: React.FC<{
         children?: React.ReactNode;
-        optionalState?: object;
     }>;
+    storeInstance: StoreModel<S, A>;
 };
 export {};

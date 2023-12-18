@@ -1,7 +1,7 @@
 import { assign, cloneDeep } from 'lodash';
 import { TSliceProps, TActionPayload, TActions, TAllActions, TStore } from '../types';
 import Container, { Inject, Service } from 'typedi';
-import { StoreModel } from '../store';
+import { Store, StoreModel } from '../store';
 
 type TReducer<S extends TStore> = TAllActions<S>;
 
@@ -16,7 +16,7 @@ export class SliceModel<State extends TStore, Reducers extends TReducer<State>, 
     if (!props.name) {
       throw Error('The slice name cannot be empty and must be set.');
     }
-    if (this.storeInstance['checkSliceName'](props.name as string)) {
+    if (this.storeInstance['checkSliceName'](props.name)) {
       throw Error(
         `The slice with the name '${props.name}' has already been created. The name '${props.name}' for the slice must be uniq, change another name slice.`
       );

@@ -20,20 +20,20 @@ type TMiddlewareProps<S extends object = undefined, A extends Record<keyof A, TA
 export class StoreModel<S extends object, A extends { [K: string]: TAllActions }> {
   private _actions: A = undefined;
 
-  protected _state: S = undefined;
+  private _state: S = undefined;
 
   private _defaultContext = { state: this._state, dispatch: () => ({}) };
 
   private _isInit = false;
 
-  private _middlewares: { action?: (props: TMiddlewareProps<S, A>) => any }[] = [];
+  protected middlewares: { action?: (props: TMiddlewareProps<S, A>) => any }[] = [];
 
   private context: React.Context<{
     state: S;
-    dispatch: TDispatch;
+    dispatch: TDispatch<A[keyof A], TActionString<A>>;
   }> = React.createContext<{
     state: S;
-    dispatch: TDispatch;
+    dispatch: TDispatch<A[keyof A], TActionString<A>>;
   }>(this._defaultContext);
 
   protected init(state: S, actions: A) {
@@ -41,7 +41,12 @@ export class StoreModel<S extends object, A extends { [K: string]: TAllActions }
       this._isInit = true;
       this._actions = actions;
       this._state = cloneDeep(state);
-      return { ...this.store, storeInstance: this as StoreModel<S, A> };
+      return {
+        context: this.context,
+        actions: this.filterAction,
+        instance: this as StoreModel<S, A>,
+        storeReducer: this.storeReducer,
+      };
     }
   }
 
@@ -53,64 +58,14 @@ export class StoreModel<S extends object, A extends { [K: string]: TAllActions }
     }
   }
 
-  private storeReducer = (state: S, action: TCaseAction) => {
+  protected storeReducer = (state: S, action: TCaseAction) => {
     this._state = cloneDeep(state);
     this.onTry(() => this._actions[action.type.split('/')[0]][action.type](action.payload));
     return this._state;
   };
 
-  private useReducerWithMiddleware(): [S, TDispatch] {
-    const [_, dispatch] = React.useReducer(this.storeReducer, this._state);
-    const dispatchWithMiddleware: TDispatch = async (action: any) => {
-      await Promise.allSettled(
-        this._middlewares
-          .map((item) =>
-            item.action.call(this, {
-              action,
-              state: this.proxyState,
-              actions: this.filterAction,
-              dispatch,
-            })
-          )
-          .concat((async () => dispatch(action)).call(this))
-      );
-    };
-    return [this._state, dispatchWithMiddleware];
-  }
-
-  private storeProvider: React.FC<{
-    children?: React.ReactNode;
-    optionalState?: object;
-  }> = ({ children }) => {
-    const [state, dispatch] = this.useReducerWithMiddleware();
-    const value = React.useMemo(() => ({ state, dispatch }), [state, dispatch]);
-    return React.createElement(this.context.Provider, {
-      value: Object.seal(value),
-      children,
-    });
-  };
-
-  private useStore<T>(fn: (state: S) => T): [state: T, { actions: A; dispatch: TDispatch }];
-  private useStore(): [state: S, { actions: A; dispatch: TDispatch }];
-  private useStore<T>(fn?: (state: S) => T) {
-    const { dispatch } = React.useContext(this.context);
-    if (fn) {
-      return [fn(this._state), { dispatch, actions: this.filterAction }];
-    }
-    return [this._state, { dispatch, actions: this.filterAction }];
-  }
-
   get proxyState() {
     return new Proxy(Object.seal(this._state), {});
-  }
-
-  get store() {
-    return {
-      useStore: this.useStore.bind(this),
-      StoreProvider: Object.defineProperty(this.storeProvider, 'name', {
-        value: 'StoreProvider',
-      }),
-    };
   }
 
   protected getState() {
@@ -122,11 +77,11 @@ export class StoreModel<S extends object, A extends { [K: string]: TAllActions }
   }
 
   private setMiddleware<T extends object = { action?: (props: TMiddlewareProps<S, A>) => any }>(...middleware: T[]) {
-    return (this._middlewares = this._middlewares.concat(middleware));
+    return (this.middlewares = this.middlewares.concat(middleware));
   }
 
   createMiddleware(...fnArr: ((props: TMiddlewareProps<S, A>) => any)[]) {
-    return this.setMiddleware(...fnArr.map((action) => ({ action })));
+    return this.setMiddleware(...fnArr.map((action) => ({ action: action.bind(this) })));
   }
 
   protected checkSliceName(name: keyof S) {
@@ -149,7 +104,46 @@ export class StoreModel<S extends object, A extends { [K: string]: TAllActions }
   }
 }
 
-export const Store = <S extends TStore, A extends Record<string, TAllActions>>(state: S, actions: A) => {
-  const instance = Container.get<StoreModel<S, A>>('StoreModel');
-  return instance['init'](state, actions);
+export const Store = <S extends TStore, A extends Record<string, TAllActions>>(state: S, appActions: A) => {
+  const { instance, actions, context: Context, storeReducer } = Container.get<StoreModel<S, A>>('StoreModel')['init'](state, appActions);
+
+  const useReducerWithMiddleware = (): [S, TDispatch<A[keyof A], TActionString<A>>] => {
+    const [_, dispatch] = React.useReducer(storeReducer, instance.proxyState);
+    const dispatchWithMiddleware: TDispatch<A[keyof A], TActionString<A>> = async (action) => {
+      const middlewares = instance['middlewares'];
+      await Promise.allSettled(
+        middlewares
+          .map((item) =>
+            item.action({
+              action,
+              state: instance.proxyState,
+              actions,
+              dispatch,
+            })
+          )
+          .concat({ action: async () => dispatch(action) }.action())
+      );
+    };
+    return [instance.proxyState, dispatchWithMiddleware];
+  };
+
+  const StoreProvider: React.FC<{
+    children?: React.ReactNode;
+  }> = ({ children }) => {
+    const [state, dispatch] = useReducerWithMiddleware();
+    const value = React.useMemo(() => ({ state, dispatch }), [state, dispatch]);
+    return <Context.Provider value={Object.seal(value)}>{children}</Context.Provider>;
+  };
+
+  function useStore<T>(fn: (state: S) => T): [state: T, { actions: A; dispatch: TDispatch }];
+  function useStore(): [state: S, { actions: A; dispatch: TDispatch }];
+  function useStore<T>(fn?: (state: S) => T) {
+    const { dispatch } = React.useContext(Context);
+    if (fn) {
+      return [fn(instance.proxyState), { dispatch, actions }];
+    }
+    return [instance.proxyState, { dispatch, actions }];
+  }
+
+  return { useStore, StoreProvider, storeInstance: instance };
 };
